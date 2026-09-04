@@ -1,0 +1,14 @@
+{
+	"design-review": {
+		"description": "Three-way design review: research prior art, critique the proposal, then commit to a concrete plan",
+		"peers": ["researcher", "critic", "implementer"]
+	},
+	"brainstorm": {
+		"description": "Just researcher + critic — pure idea generation without an implementer to anchor",
+		"peers": ["researcher", "critic"]
+	},
+	"debug": {
+		"description": "Critic tears apart assumptions, implementer proposes concrete fixes",
+		"peers": ["critic", "implementer"]
+	}
+}

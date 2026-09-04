@@ -1,0 +1,24 @@
+# Node / npm
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Local install (in case someone installs into the repo)
+.pi-roundtable/
+.installed
+
+# Editor / OS
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Test outputs
+/tmp/roundtable-test-*.md
+/test-output/outputs
+
+# Don't ignore the install.sh script itself even if a tmp/ dir exists
+!install.sh
