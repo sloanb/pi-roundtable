@@ -42,7 +42,7 @@ for dir in bin lib peers; do
 		cp -r "$SRC_DIR/$dir" "$INSTALL_DIR/"
 	fi
 done
-for file in presets.json README.md LICENSE; do
+for file in presets.json README.md LICENSE package.json; do
 	if [ -f "$SRC_DIR/$file" ]; then
 		cp "$SRC_DIR/$file" "$INSTALL_DIR/"
 	fi

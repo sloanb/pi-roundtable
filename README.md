@@ -1,6 +1,6 @@
 # pi-roundtable
 
-Group conversations between [pi](https://github.com/badlogic/pi-coding-agent) AI agents. Spawn multiple `pi` processes as separate "peers," each with its own model and persona, and have them talk through a topic together.
+Group conversations between [pi](https://github.com/earendil-works/pi/tree/main/packages/coding-agent) AI agents. Spawn multiple `pi` processes as separate "peers," each with its own model and persona, and have them talk through a topic together.
 
 ```
 ━━━ Round 1 ━━━ researcher (researcher) ━━━
@@ -245,7 +245,7 @@ The personas in `peers/*.md` are tuned to use these naturally. If you write a cu
 ## Requirements
 
 - Node.js 18+ **or** Bun
-- [`pi`](https://github.com/badlogic/pi-coding-agent) on PATH (the orchestrator shells out to it)
+- [`pi`](https://github.com/earendil-works/pi/tree/main/packages/coding-agent) on PATH (the orchestrator shells out to it)
 - API keys for whichever model provider you configure (Anthropic, OpenAI, ollama-cloud, local llama.cpp, etc.)
 
 ## License

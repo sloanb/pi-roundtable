@@ -22,6 +22,7 @@
     "discussion"
   ],
   "license": "MIT",
+  "author": "Sloan Bowman",
   "repository": {
     "type": "git",
     "url": "git@github.com:sloanb/pi-roundtable.git"

@@ -1,14 +1,27 @@
 {
 	"design-review": {
 		"description": "Three-way design review: research prior art, critique the proposal, then commit to a concrete plan",
-		"peers": ["researcher", "critic", "implementer"]
+		"peers": ["researcher", "critic", "implementer"],
+		"tools": {
+			"researcher": ["read", "bash", "kagi_search", "kagi_extract", "symbol_search", "project_report", "module_report", "read_symbol"],
+			"critic": ["read", "bash", "lsp_diagnostics", "lens_diagnostics", "symbol_search", "read_symbol"],
+			"implementer": ["read", "bash", "edit", "write", "subagent", "mcp", "mcpScript", "symbol_search", "module_report", "read_symbol", "read_enclosing"]
+		}
 	},
 	"brainstorm": {
 		"description": "Just researcher + critic — pure idea generation without an implementer to anchor",
-		"peers": ["researcher", "critic"]
+		"peers": ["researcher", "critic"],
+		"tools": {
+			"researcher": ["read", "bash", "kagi_search", "kagi_extract", "symbol_search", "project_report", "module_report", "read_symbol"],
+			"critic": ["read", "bash", "lsp_diagnostics", "lens_diagnostics", "symbol_search", "read_symbol"]
+		}
 	},
 	"debug": {
 		"description": "Critic tears apart assumptions, implementer proposes concrete fixes",
-		"peers": ["critic", "implementer"]
+		"peers": ["critic", "implementer"],
+		"tools": {
+			"critic": ["read", "bash", "lsp_diagnostics", "lens_diagnostics", "symbol_search", "read_symbol"],
+			"implementer": ["read", "bash", "edit", "write", "subagent", "mcp", "mcpScript", "symbol_search", "module_report", "read_symbol", "read_enclosing"]
+		}
 	}
 }
