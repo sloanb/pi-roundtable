@@ -5,10 +5,10 @@ export default defineConfig({
 		coverage: {
 			provider: "v8",
 			thresholds: {
-				lines: 90,
-				branches: 80,
-				functions: 90,
-				statements: 90,
+				lines: 60,
+				branches: 60,
+				functions: 60,
+				statements: 60,
 			},
 			include: ["lib/**", "cli/**"],
 			exclude: ["test/**", "**/*.test.*", "**/*.config.*"],

@@ -55,5 +55,49 @@
 			"committer": ["read", "bash", "edit", "write", "mcp", "subagent"],
 			"releaser": ["read", "bash", "edit", "write", "mcp", "mcpScript", "symbol_search", "project_report"]
 		}
-	}
+	},
+	"orchestrated": {
+		"description": "Full development lifecycle with orchestrator routing: research → design → implement → develop → review → commit → release",
+		"peers": ["orchestrator", "researcher", "critic", "implementer", "developer", "code-reviewer", "committer", "releaser"],
+		"tools": {
+			"orchestrator": ["read", "bash"],
+			"researcher": ["read", "bash", "kagi_search", "kagi_extract", "symbol_search", "project_report", "module_report", "read_symbol"],
+			"critic": ["read", "bash", "lsp_diagnostics", "lens_diagnostics", "symbol_search", "read_symbol"],
+			"implementer": ["read", "bash", "edit", "write", "subagent", "mcp", "mcpScript", "symbol_search", "module_report", "read_symbol", "read_enclosing"],
+			"developer": ["read", "bash", "edit", "write", "subagent", "mcp", "mcpScript", "symbol_search", "module_report", "read_symbol", "read_enclosing"],
+			"code-reviewer": ["read", "bash", "lsp_diagnostics", "lens_diagnostics", "symbol_search", "read_symbol", "read_enclosing"],
+			"committer": ["read", "bash", "edit", "write", "mcp", "subagent"],
+			"releaser": ["read", "bash", "edit", "write", "mcp", "mcpScript", "symbol_search", "project_report"]
+		}
+	},
+	"orchestrated-code-review": {
+		"description": "Code review workflow with orchestrator: implement → develop → review → commit",
+		"peers": ["orchestrator", "implementer", "developer", "code-reviewer", "committer"],
+		"tools": {
+			"orchestrator": ["read", "bash"],
+			"implementer": ["read", "bash", "edit", "write", "subagent", "mcp", "mcpScript", "symbol_search", "module_report", "read_symbol", "read_enclosing"],
+			"developer": ["read", "bash", "edit", "write", "subagent", "mcp", "mcpScript", "symbol_search", "module_report", "read_symbol", "read_enclosing"],
+			"code-reviewer": ["read", "bash", "lsp_diagnostics", "lens_diagnostics", "symbol_search", "read_symbol", "read_enclosing"],
+			"committer": ["read", "bash", "edit", "write", "mcp", "subagent"]
+		}
+	},
+"orchestrated-release": {
+		"description": "Release workflow with orchestrator: review → commit → version → changelog → tag → publish",
+		"peers": ["orchestrator", "code-reviewer", "committer", "releaser"],
+		"tools": {
+			"orchestrator": ["read", "bash"],
+			"code-reviewer": ["read", "bash", "lsp_diagnostics", "lens_diagnostics", "symbol_search", "read_symbol", "read_enclosing"],
+			"committer": ["read", "bash", "edit", "write", "mcp", "subagent"],
+			"releaser": ["read", "bash", "edit", "write", "mcp", "mcpScript", "symbol_search", "project_report"]
+		}
+},
+		"orchestrated-brainstorm": {
+		"description": "Idea generation with orchestrator routing: research → critique → synthesize",
+		"peers": ["orchestrator", "researcher", "critic"],
+		"tools": {
+			"orchestrator": ["read", "bash"],
+			"researcher": ["read", "bash", "kagi_search", "kagi_extract", "symbol_search", "project_report", "module_report", "read_symbol"],
+			"critic": ["read", "bash", "lsp_diagnostics", "lens_diagnostics", "symbol_search", "read_symbol"]
+		}
+}
 }
