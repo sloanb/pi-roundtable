@@ -7,7 +7,9 @@
     "pi-roundtable": "./bin/pi-roundtable"
   },
   "scripts": {
-    "test": "echo 'See test/ for tests' && exit 0",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit",
     "smoke": "node lib/pi-roundtable.mjs --list-presets && node lib/pi-roundtable.mjs --list-models"
   },
   "engines": {
@@ -39,5 +41,10 @@
     "README.md",
     "LICENSE",
     "install.sh"
-  ]
+  ],
+  "devDependencies": {
+    "@types/node": "^26.4.1",
+    "typescript": "^7.0.2",
+    "vitest": "^3.0.0"
+  }
 }

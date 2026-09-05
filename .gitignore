@@ -19,6 +19,10 @@ yarn-error.log*
 # Test outputs
 /tmp/roundtable-test-*.md
 /test-output/outputs
+coverage/
+
+# TypeScript build output
+dist/
 
 # Don't ignore the install.sh script itself even if a tmp/ dir exists
 !install.sh
