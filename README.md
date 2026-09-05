@@ -16,9 +16,16 @@ Group conversations between [pi](https://github.com/earendil-works/pi/tree/main/
 
 ## What it does
 
-You give it a topic. It picks 2-3 "peer" agents (each with its own model and persona). The peers take turns responding to each other until they reach consensus or hit the round limit. You watch the conversation stream to your terminal in real-time.
+You give it a topic. It spawns multiple "peer" agents (each with its own model and persona). The peers take turns responding to each other until they reach consensus or hit the round limit. You watch the conversation stream to your terminal in real-time.
 
-Each peer is a separate `pi --mode rpc` process with an isolated context window, so peers can't see each other's working notes — only the published turns. The orchestrator relays turns through a shared transcript.
+Each peer is a separate `pi --mode rpc` process with an isolated context window, so peers can't see each other's working notes — only the published turns.
+
+Two conversation modes:
+
+- **Sequential (legacy)** — peers speak in round-robin order; any peer can signal `[DONE]` to end
+- **Orchestrated** — an `orchestrator` peer routes tasks to specific peers based on capabilities, tracks workflow state, and is the **only** peer allowed to signal `[DONE]`
+
+Use `--mode orchestrated` (or a preset that includes `orchestrator`) to enable intelligent routing.
 
 ## When to use it
 
@@ -60,10 +67,18 @@ To uninstall: `rm -rf ~/.pi-roundtable ~/.local/bin/pi-roundtable`
 ## Quick start
 
 ```bash
-# A three-way design review
+# A three-way design review (sequential)
 pi-roundtable --preset design-review \
   --topic "Should we add Redis caching to the session store?" \
   --save
+
+# Full development lifecycle with orchestrator routing
+pi-roundtable --preset orchestrated \
+  --topic "Build a user authentication system with JWT"
+
+# Code review workflow with orchestrator
+pi-roundtable --preset orchestrated-code-review \
+  --topic "Review PR #42: rate limiting middleware"
 
 # Just brainstorm, fast
 pi-roundtable --preset brainstorm \
@@ -89,6 +104,11 @@ pi-roundtable --preset brainstorm \
 | `researcher` | grounds discussion in facts, cites sources | "What does the data say?" |
 | `critic` | challenges assumptions, finds flaws | "What could go wrong?" |
 | `implementer` | commits to concrete plans | "What would I actually do?" |
+| `developer` | writes production code, tests, refactors | "Show me the implementation" |
+| `code-reviewer` | reviews code for correctness, security, style | "What did the implementer miss?" |
+| `committer` | handles git, commits, PR preparation | "Ship it" |
+| `releaser` | versioning, changelog, publishing | "Release it" |
+| `orchestrator` | routes tasks, tracks state, detects consensus | "Who does what, and when?" |
 
 Each peer is a markdown file in `peers/` with a YAML frontmatter:
 
@@ -97,22 +117,33 @@ Each peer is a markdown file in `peers/` with a YAML frontmatter:
 name: my-peer
 role: my-role
 model: ollama-cloud/glm-5.3-flash
+tools: read, bash, edit, write
+capabilities:
+  - capability-name
+  - another-capability
 ---
 
 System prompt for the agent.
 ```
 
-Override peers for a single run with `--peers name1,name2`, or permanently by editing the file.
+The `capabilities` field (optional) tells the orchestrator what this peer is good at, enabling smart routing. Override peers for a single run with `--peers name1,name2`, or permanently by editing the file.
 
 **Preset** — a named combination of peers. Defaults:
 
 | Preset | Peers | Use when |
 | --- | --- | --- |
-| `design-review` | researcher, critic, implementer | You want a plan at the end |
-| `brainstorm` | researcher, critic | Pure ideation, no implementation pressure |
-| `debug` | critic, implementer | You have a problem, want adversarial fix |
+| `design-review` | researcher, critic, implementer | You want a plan at the end (sequential) |
+| `brainstorm` | researcher, critic | Pure ideation, no implementation pressure (sequential) |
+| `debug` | critic, implementer | You have a problem, want adversarial fix (sequential) |
+| `full-cycle` | researcher, critic, implementer, developer, code-reviewer, committer, releaser | Full dev lifecycle (sequential) |
+| `code-review` | implementer, developer, code-reviewer, committer | Code-focused workflow (sequential) |
+| `release-prep` | code-reviewer, committer, releaser | Final release stage (sequential) |
+| `orchestrated` | orchestrator, researcher, critic, implementer, developer, code-reviewer, committer, releaser | Full dev lifecycle with intelligent routing |
+| `orchestrated-code-review` | orchestrator, implementer, developer, code-reviewer, committer | Code review with intelligent routing |
+| `orchestrated-release` | orchestrator, code-reviewer, committer, releaser | Release workflow with intelligent routing |
+| `orchestrated-brainstorm` | orchestrator, researcher, critic | Idea generation with intelligent routing |
 
-Use `--preset NAME` to invoke.
+Use `--preset NAME` to invoke. Orchestrated presets auto-enable `--mode orchestrated`.
 
 **Transcript** — saved markdown of the full conversation. Use `--save` to write one. Saved files are searchable:
 
@@ -133,6 +164,9 @@ Composition:
   -p, --peers NAMES           Comma-separated peer names (default: all)
       --preset NAME           Use a preset peer composition
   -r, --max-rounds N          Stop after N rounds (default: 12)
+      --mode MODE             Conversation mode: sequential (default), orchestrated
+      --pretty                Pretty-print JSON responses in console (default on TTY)
+      --no-pretty             Disable pretty-printing
 
 Saving / loading:
   -o, --save [PATH]           Save transcript to markdown (auto-name if no path)
@@ -214,12 +248,14 @@ To add a preset, edit `presets.json`:
 
 ## How the agents talk
 
-The orchestrator relays each peer's final turn into the next peer's prompt as a transcript. Peers only see *published* turns, not each other's internal reasoning — they get a clean context per round.
+In **sequential mode**, the orchestrator relays each peer's final turn into the next peer's prompt as a transcript. Peers only see *published* turns, not each other's internal reasoning — they get a clean context per round.
+
+In **orchestrated mode**, the `orchestrator` peer receives structured JSON reports from each peer, maintains workflow state (completed/pending/blocked tasks, artifacts), and routes the next task to the most appropriate peer based on capabilities. See `ORCHESTRATOR_PROTOCOL.md` for the full JSON schema.
 
 Two control tokens the agents use:
 
 - **`[YIELD]`** — peer is done speaking, hand off to the next
-- **`[DONE]`** — peer thinks consensus is reached; loop stops with summary
+- **`[DONE]`** — **only the orchestrator** (in orchestrated mode) or **final peers** (implementer, committer, releaser, researcher in sequential mode) may signal consensus; loop stops with summary
 
 The personas in `peers/*.md` are tuned to use these naturally. If you write a custom peer, train it on the same convention or it won't know when to stop.
 
