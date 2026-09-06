@@ -6,6 +6,8 @@ export interface PeerDefinition {
 	role: string;
 	model?: string;
 	tools?: string[];
+	/** Optional capability tags, used by the orchestrator for smart routing. */
+	capabilities?: string[];
 	systemPrompt?: string;
 }
 

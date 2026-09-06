@@ -210,3 +210,9 @@ For external consumers wanting to implement custom peers or extend the protocol:
 ## Version History
 
 - v1.0 (pi-roundtable 0.3.0): Initial protocol specification
+- v1.1 (pi-roundtable 0.4.0-beta.1): No schema changes. The `capabilities`
+  field in peer frontmatter is now actually parsed and passed through to the
+  orchestrator context, so capability-based routing works as documented.
+  On a `done` action, the launcher now renders a full conclusion report
+  (summary + details) to the console and to the saved transcript's
+  `## Conclusion` section.

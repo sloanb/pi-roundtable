@@ -1,9 +1,10 @@
-import { describe, it, expect, vi } from "vitest";
-import type { PeerConfig } from "../types/peer.js";
+import { describe, it, expect } from "vitest";
 import {
 	parseArgs,
 	parseFrontmatter,
 	slugify,
+	isBlankTopic,
+	parseToolsOverrides,
 	renderMarkdown,
 	loadPeers,
 	loadPresets,
@@ -11,7 +12,6 @@ import {
 	resolveTools,
 	printDryRun,
 	findTranscripts,
-	readTranscript,
 	renderTranscript,
 	runListTranscripts,
 	runShow,
@@ -301,6 +301,37 @@ describe("pi-roundtable CLI", () => {
 			const result = parseFrontmatter(content);
 			expect(result.tools).toEqual([]);
 		});
+
+		it("leaves tools undefined when the key is absent (defaults apply later)", () => {
+			const content = `---\nname: no-tools\n---\nbody`;
+			const result = parseFrontmatter(content);
+			expect(result.tools).toBeUndefined();
+		});
+
+		it("parses capabilities as a block list", () => {
+			const content = `---\nname: critic\ncapabilities:\n  - code-review\n  - security-audit\n---\nbody`;
+			const result = parseFrontmatter(content);
+			expect(result.capabilities).toEqual(["code-review", "security-audit"]);
+		});
+
+		it("parses capabilities declared inline as an empty list", () => {
+			const content = `---\nname: critic\ncapabilities:\n---\nbody`;
+			const result = parseFrontmatter(content);
+			expect(result.capabilities).toEqual([]);
+		});
+
+		it("leaves capabilities undefined when absent", () => {
+			const content = `---\nname: critic\n---\nbody`;
+			const result = parseFrontmatter(content);
+			expect(result.capabilities).toBeUndefined();
+		});
+
+		it("leaves bare scalar keys unset so downstream defaults apply", () => {
+			const content = `---\nname: x\nmodel:\nrole: y\n---\nbody`;
+			const result = parseFrontmatter(content);
+			expect(result.model).toBeUndefined();
+			expect(result.role).toBe("y");
+		});
 	});
 
 	describe("slugify", () => {
@@ -375,15 +406,81 @@ describe("pi-roundtable CLI", () => {
 			expect(md).toContain("Second turn");
 		});
 
-		it("includes consensus section when consensus=true", () => {
+		it("includes conclusion section when consensus=true", () => {
 			const md = renderMarkdown(baseOpts);
-			expect(md).toContain("## Consensus");
-			expect(md).toContain("Reached at round 1 by **critic**");
+			expect(md).toContain("## Conclusion");
+			expect(md).toContain(
+				"✅ Consensus reached at round 1 by **critic** (critic).",
+			);
+			expect(md).toContain("### Summary");
+			// Without structured conclusion data, the last turn's text is the summary
+			expect(md).toContain("Second turn");
 		});
 
-		it("excludes consensus section when consensus=false", () => {
+		it("excludes conclusion section when consensus=false", () => {
 			const md = renderMarkdown({ ...baseOpts, consensus: false });
-			expect(md).not.toContain("## Consensus");
+			expect(md).not.toContain("## Conclusion");
+			expect(md).not.toContain("### Summary");
+		});
+
+		it("renders a structured conclusion with summary, details, and peer reports", () => {
+			const conclusion = {
+				mode: "orchestrated" as const,
+				byPeer: "orchestrator",
+				byRole: "orchestrator",
+				round: 3,
+				summary: "All tasks complete. Implementation reviewed.",
+				structured: null,
+				artifacts: ["src/auth.ts", "tests/auth.test.ts"],
+				completedTasks: ["research", "implement"],
+				pendingTasks: ["release"],
+				blockedTasks: [],
+				peerFindings: [
+					{
+						peer: "researcher",
+						role: "researcher",
+						status: "complete",
+						findings: "Prior art found.",
+						artifacts: [],
+					},
+				],
+			};
+			const md = renderMarkdown({ ...baseOpts, conclusion });
+			expect(md).toContain("## Conclusion");
+			expect(md).toContain(
+				"✅ Consensus reached at round 3 by **orchestrator** (orchestrator).",
+			);
+			expect(md).toContain("### Summary");
+			expect(md).toContain("All tasks complete. Implementation reviewed.");
+			expect(md).toContain("### Details");
+			expect(md).toContain(
+				"**Artifacts produced:** src/auth.ts, tests/auth.test.ts",
+			);
+			expect(md).toContain("**Tasks completed:** research, implement");
+			expect(md).toContain("**Tasks pending:** release");
+			expect(md).toContain("### Peer reports");
+			expect(md).toContain("#### researcher (researcher) — complete");
+			expect(md).toContain("Prior art found.");
+		});
+
+		it("omits details sections when the conclusion has no details", () => {
+			const conclusion = {
+				mode: "sequential" as const,
+				byPeer: "critic",
+				byRole: "critic",
+				round: 1,
+				summary: "We agree.",
+				structured: null,
+				artifacts: [],
+				completedTasks: [],
+				pendingTasks: [],
+				blockedTasks: [],
+				peerFindings: [],
+			};
+			const md = renderMarkdown({ ...baseOpts, conclusion });
+			expect(md).toContain("We agree.");
+			expect(md).not.toContain("### Details");
+			expect(md).not.toContain("### Peer reports");
 		});
 
 		it("shows max-rounds-reached outcome", () => {
@@ -508,6 +605,34 @@ describe("pi-roundtable CLI", () => {
 			const result = resolveTools({ selected, args, presets: mockPresets });
 			expect(result.researcher).toEqual(["cli1", "cli2"]);
 		});
+
+		it("applies default tools to a peer with no tools configured", () => {
+			const selected = [
+				{ name: "bare", role: "researcher" }, // no tools from peer file
+			];
+			const args = { ...baseArgs, tools: null, preset: null };
+			const result = resolveTools({ selected, args, presets: {} });
+			expect(result.bare).toEqual(["read", "bash", "edit", "write"]);
+		});
+	});
+
+	describe("parseToolsOverrides", () => {
+		it("returns an empty map for a null spec", () => {
+			expect(parseToolsOverrides(null).size).toBe(0);
+		});
+
+		it("parses multiple name=tools pairs", () => {
+			const overrides = parseToolsOverrides(
+				"researcher=cli_tool1,cli_tool2,critic=cli_tool3",
+			);
+			expect(overrides.get("researcher")).toEqual(["cli_tool1", "cli_tool2"]);
+			expect(overrides.get("critic")).toEqual(["cli_tool3"]);
+		});
+
+		it("supports comma continuation without repeating the name", () => {
+			const overrides = parseToolsOverrides("researcher=cli1,cli2,cli3");
+			expect(overrides.get("researcher")).toEqual(["cli1", "cli2", "cli3"]);
+		});
 	});
 
 	describe("printDryRun", () => {
@@ -543,6 +668,14 @@ describe("loadPeers", () => {
 		expect(names).toContain("critic");
 		expect(names).toContain("orchestrator");
 	});
+
+	it("loads capabilities declared in peer frontmatter", async () => {
+		const peers = await loadPeers();
+		const researcher = peers.find((p) => p.name === "researcher");
+		expect(researcher?.capabilities).toContain("research");
+		const critic = peers.find((p) => p.name === "critic");
+		expect(critic?.capabilities).toContain("critique");
+	});
 });
 
 describe("loadPresets", () => {
@@ -551,6 +684,21 @@ describe("loadPresets", () => {
 		expect(presets).toHaveProperty("design-review");
 		expect(presets).toHaveProperty("orchestrated");
 		expect(presets).toHaveProperty("orchestrated-brainstorm");
+	});
+});
+
+describe("isBlankTopic", () => {
+	it("treats null, undefined, empty, and whitespace-only as blank", () => {
+		expect(isBlankTopic(null)).toBe(true);
+		expect(isBlankTopic(undefined)).toBe(true);
+		expect(isBlankTopic("")).toBe(true);
+		expect(isBlankTopic("   ")).toBe(true);
+		expect(isBlankTopic(" \n\t ")).toBe(true);
+	});
+
+	it("treats non-whitespace topics as present", () => {
+		expect(isBlankTopic("hello")).toBe(false);
+		expect(isBlankTopic("  spaced topic  ")).toBe(false);
 	});
 });
 
@@ -577,6 +725,63 @@ describe("renderTranscript", () => {
 		expect(result).toContain("Test topic");
 		expect(result).toContain("Test body content");
 		expect(result).toContain("researcher");
+	});
+
+	it("renders the conclusion section last, after all turns", () => {
+		const result = renderTranscript(
+			{
+				meta: {
+					topic: "Test topic",
+					peers: [{ name: "a", role: "researcher" }],
+				},
+				body: [
+					"### Round 1 · a",
+					"Turn body",
+					"",
+					"## Conclusion",
+					"",
+					"✅ Consensus reached at round 1 by **a** (researcher).",
+					"",
+					"### Summary",
+					"",
+					"All agreed on option B.",
+				].join("\n"),
+			},
+			{ color: false },
+		);
+		expect(result).toContain("━━━ CONCLUSION ━━━");
+		expect(result).toContain("All agreed on option B.");
+		// The conclusion renders after the turn content
+		expect(result.indexOf("Turn body")).toBeLessThan(
+			result.indexOf("━━━ CONCLUSION ━━━"),
+		);
+		expect(result.indexOf("━━━ CONCLUSION ━━━")).toBeLessThan(
+			result.indexOf("All agreed on option B."),
+		);
+	});
+
+	it("renders legacy ## Consensus sections (backward compat)", () => {
+		const result = renderTranscript(
+			{
+				meta: { topic: "Test topic", peers: [] },
+				body:
+					"### Round 1 · a\nTurn body\n\n## Consensus\n\nReached at round 1 by **a** (researcher).",
+			},
+			{ color: false },
+		);
+		expect(result).toContain("━━━ CONCLUSION ━━━");
+		expect(result).toContain("Reached at round 1 by **a** (researcher).");
+	});
+
+	it("omits the conclusion marker when there is no conclusion section", () => {
+		const result = renderTranscript(
+			{
+				meta: { topic: "Test topic", peers: [] },
+				body: "### Round 1 · a\nTurn body",
+			},
+			{ color: false },
+		);
+		expect(result).not.toContain("━━━ CONCLUSION ━━━");
 	});
 });
 

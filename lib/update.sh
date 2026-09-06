@@ -31,7 +31,9 @@ die() {
     exit 1
 }
 
-# Semantic version comparison
+# Semantic version comparison, with prerelease support
+# Handles versions like "0.4.0" and "0.4.0-beta.1" (semver ordering:
+# a prerelease sorts BEFORE its own release).
 # Returns: 0 if v1 == v2, 1 if v1 > v2, 2 if v1 < v2
 version_compare() {
     local v1="$1" v2="$2"
@@ -39,8 +41,15 @@ version_compare() {
     v1="${v1#v}"
     v2="${v2#v}"
     if [[ "$v1" == "$v2" ]]; then return 0; fi
+
+    # Split off prerelease suffixes: "0.4.0-beta.1" -> core "0.4.0", pre "beta.1"
+    local core1="${v1%%-*}" pre1=""
+    local core2="${v2%%-*}" pre2=""
+    [[ "$v1" == *-* ]] && pre1="${v1#*-}"
+    [[ "$v2" == *-* ]] && pre2="${v2#*-}"
+
     local IFS=.
-    local i ver1=($v1) ver2=($v2)
+    local i ver1=($core1) ver2=($core2)
     # Fill empty fields with zeros
     for ((i = ${#ver1[@]}; i < ${#ver2[@]}; i++)); do ver1[i]=0; done
     for ((i = ${#ver2[@]}; i < ${#ver1[@]}; i++)); do ver2[i]=0; done
@@ -48,6 +57,25 @@ version_compare() {
         if ((10#${ver1[i]} > 10#${ver2[i]})); then return 1; fi
         if ((10#${ver1[i]} < 10#${ver2[i]})); then return 2; fi
     done
+
+    # Cores equal: a prerelease sorts before the plain release (semver)
+    if [[ -n "$pre1" && -z "$pre2" ]]; then return 2; fi
+    if [[ -z "$pre1" && -n "$pre2" ]]; then return 1; fi
+
+    # Both prereleases: compare suffix segments ("beta.1" < "beta.2" < "rc.1").
+    # Numeric segments compare numerically, others lexically.
+    local p1=($pre1) p2=($pre2)
+    for ((i = 0; i < ${#p1[@]} && i < ${#p2[@]}; i++)); do
+        if [[ "${p1[i]}" =~ ^[0-9]+$ && "${p2[i]}" =~ ^[0-9]+$ ]]; then
+            if ((10#${p1[i]} > 10#${p2[i]})); then return 1; fi
+            if ((10#${p1[i]} < 10#${p2[i]})); then return 2; fi
+        else
+            if [[ "${p1[i]}" > "${p2[i]}" ]]; then return 1; fi
+            if [[ "${p1[i]}" < "${p2[i]}" ]]; then return 2; fi
+        fi
+    done
+    ((${#p1[@]} > ${#p2[@]})) && return 1
+    ((${#p1[@]} < ${#p2[@]})) && return 2
     return 0
 }
 

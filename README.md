@@ -11,8 +11,22 @@ Group conversations between [pi](https://github.com/earendil-works/pi/tree/main/
 💬 critic is speaking...
 **Critic:** Researcher — the framework is solid, but you haven't actually answered...
 
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📋 CONCLUSION — ✅ consensus reached
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Topic:        Which Linux distro is most popular?
+Concluded by: 🔍 researcher (researcher) at round 2 of 12 (sequential mode)
+
+Summary:
+
+The group agreed: "most popular" depends on the metric — server installs
+favor Debian-family, desktop adoption favors Mint/Ubuntu derivatives...
+
 ━━━ END ━━━ consensus reached ━━━
 ```
+
+The **conclusion is always the last content printed before the `END` footer**, so the outcome of a run is easy to find and never buried in the conversation. On `[DONE]`, a well-formatted conclusion report is printed with the summary and all details (who concluded and when, artifacts produced, task state, and each peer's final findings in orchestrated mode). If the round limit is hit without a conclusion, a clear `📋 OUTCOME — no conclusion` block explains that instead — so a completed run is never ambiguous.
 
 ## What it does
 
@@ -63,6 +77,37 @@ pi-roundtable --list-models
 ```
 
 To uninstall: `rm -rf ~/.pi-roundtable ~/.local/bin/pi-roundtable`
+
+### Updating & release channels
+
+pi-roundtable can update itself from GitHub releases:
+
+```bash
+# Check for updates without installing (exit code 1 if one is available)
+pi-roundtable --check-only
+
+# Install the latest stable release
+pi-roundtable --update
+
+# Something broke? Restore the previous version from backup
+pi-roundtable --rollback
+```
+
+**Beta releases** are published as GitHub *pre-releases* (e.g.
+`v0.4.0-beta.1`). Pull them with the `prerelease` channel:
+
+```bash
+pi-roundtable --check-only --channel prerelease
+pi-roundtable --update --channel prerelease
+```
+
+Stable installs never auto-receive pre-releases — `--update` defaults to the
+`stable` channel, which only sees releases **not** marked "Pre-release". To
+live on the beta line, always pass `--channel prerelease`. When the stable
+release that graduates a beta ships, a beta install picks it up on either
+channel (the updater orders `0.4.0-beta.1 < 0.4.0` correctly).
+
+See `CHANGELOG.md` for what each release contains.
 
 ## Quick start
 
@@ -189,6 +234,14 @@ Models:
 Inspection:
   -n, --dry-run               Print config + first prompt, exit (no API calls)
 
+Updating:
+      --update                Check for and install the latest release from GitHub
+      --check-only             Check for updates without installing
+                              (exit code 1 if an update is available)
+      --channel CHANNEL        Release channel: stable (default), prerelease
+      --rollback               Restore previous version from backup
+  -y, --yes                   Non-interactive mode (assume yes to prompts)
+
 Other:
   -h, --help                  Show this help
 ```
@@ -208,6 +261,10 @@ What you'll see:
 - Per-round: peer name → streaming text in their color
 - Each peer ends with `[YIELD]` to hand off, or `[DONE]` if they think consensus is reached
 - Loop stops on `[DONE]` or `--max-rounds`
+- On `[DONE]`: a `📋 CONCLUSION` block — the full summary and details — printed immediately before the `END` footer
+- On `--max-rounds` without `[DONE]`: a `📋 OUTCOME — no conclusion` block explaining that no consensus was reached
+
+Saved transcripts (`--save`) end with the same `## Conclusion` section (summary, details, and peer reports), and `--show` renders it as the final section.
 
 Save and review later:
 
@@ -255,7 +312,7 @@ In **orchestrated mode**, the `orchestrator` peer receives structured JSON repor
 Two control tokens the agents use:
 
 - **`[YIELD]`** — peer is done speaking, hand off to the next
-- **`[DONE]`** — **only the orchestrator** (in orchestrated mode) or **final peers** (implementer, committer, releaser, researcher in sequential mode) may signal consensus; loop stops with summary
+- **`[DONE]`** — **only the orchestrator** (in orchestrated mode) or **final peers** (implementer, committer, releaser, researcher in sequential mode) may signal consensus; the loop stops and a full conclusion report (summary + details) is printed as the last content before the `END` footer
 
 The personas in `peers/*.md` are tuned to use these naturally. If you write a custom peer, train it on the same convention or it won't know when to stop.
 
@@ -270,6 +327,10 @@ The personas in `peers/*.md` are tuned to use these naturally. If you write a cu
 **Output is one wall of text** — your stdout isn't a TTY (piped to file or another process). Streaming only kicks in on a TTY. Force non-streaming with `PI_ROUNDTABLE_QUIET=1` if you want a clean file capture.
 
 **`peer _streamedTurn` warning or other JS errors** — please open an issue with the full stack trace.
+
+**Spinner frames keep printing after the END banner / the process never exits** — this was a leaked thinking-animation timer (fixed in 0.3.1: the spinner is now stopped on first token and when each turn settles, and shutdown clears all animation timers). If you still see it, please open an issue.
+
+**`Error: --topic is empty or only whitespace`** — the CLI received a blank topic, almost always a shell quoting mistake. A common cause is a trailing space after a line-continuation backslash: `--topic "..." \` escapes the *space* instead of joining the line, so the next line never becomes part of the command. Write `\` as the very last character of the line.
 
 ## Security
 

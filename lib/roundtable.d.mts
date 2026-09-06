@@ -1,8 +1,14 @@
 import type { PeerConfig } from "../types/peer.js";
-import type { Turn, RunResult } from "../types/transcript.js";
+import type {
+	TranscriptMeta,
+	Turn,
+	Conclusion,
+	PeerFinding,
+} from "../types/transcript.js";
 
 export interface RoundtablePeerConfig extends PeerConfig {
-	capabilities?: string[];
+	// PeerConfig carries name/role/model/tools/capabilities/systemPrompt.
+	// Add orchestrated-mode extras here as they arise.
 }
 
 export interface WorkflowState {
@@ -41,6 +47,7 @@ export declare class Roundtable {
 	clients: Map<string, unknown>;
 	transcript: Turn[];
 	round: number;
+	conclusion: Conclusion | null;
 	workflowState: WorkflowState;
 
 	constructor(opts: RoundtableOptions);
@@ -54,6 +61,27 @@ export declare class Roundtable {
 	_getPeerCapabilities(): string;
 	_getPeerList(): Array<{ name: string; role: string; capabilities: string[] }>;
 	_applyStateUpdate(update?: Partial<WorkflowState>): void;
+	_collectPeerFindings(): PeerFinding[];
+	_recordConclusion(opts: {
+		byPeer: string;
+		byRole: string;
+		round: number;
+		summary: string;
+		structured?: unknown | null;
+		finalArtifacts?: Array<string | unknown> | Record<string, unknown> | null;
+	}): void;
+	_buildConclusionBlock(consensus: boolean): string;
+	_finishRun(consensus: boolean): RunResult;
+	_fallbackTurn(): Promise<boolean>;
+	_startThinking(peer: { name: string; role: string }): void;
+	_stopThinking(peer: { name: string; role: string }): void;
+	_wireLog(
+		client: {
+			onEvent(fn: (evt: unknown) => void): () => void;
+			kill(): void;
+		},
+		peer: RoundtablePeerConfig,
+	): void;
 }
 
 export interface OrchestratorAction {

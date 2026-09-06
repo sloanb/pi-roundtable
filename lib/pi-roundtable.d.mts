@@ -1,5 +1,5 @@
 import type { PeerConfig } from "../types/peer.js";
-import type { TranscriptMeta, Turn } from "../types/transcript.js";
+import type { TranscriptMeta, Turn, Conclusion } from "../types/transcript.js";
 
 export interface ParsedFrontmatter {
 	name?: string;
@@ -13,6 +13,13 @@ export interface ParsedFrontmatter {
 export declare function parseFrontmatter(content: string): ParsedFrontmatter;
 
 export declare function slugify(s: string): string;
+
+/**
+ * True when a topic is missing or only whitespace (guards against shell
+ * quoting mistakes like a trailing space after a line-continuation
+ * backslash).
+ */
+export declare function isBlankTopic(s: string | null | undefined): boolean;
 
 export declare function checkModel(
 	configured: string,
@@ -28,6 +35,7 @@ export interface RenderMarkdownOptions {
 	startedAt: number;
 	endedAt: number;
 	tags?: Array<string>;
+	conclusion?: Conclusion | null;
 }
 
 export declare function renderMarkdown(opts: RenderMarkdownOptions): string;
@@ -114,3 +122,11 @@ export declare function resolveTools(args: {
 	};
 	presets: Record<string, { tools?: Record<string, string[]> }>;
 }): Record<string, string[]>;
+
+/**
+ * Parse a --tools CLI spec ("name=tool1,tool2,name=tool3") into a Map of
+ * peer name -> tools array.
+ */
+export declare function parseToolsOverrides(
+	spec: string | null | undefined,
+): Map<string, string[]>;

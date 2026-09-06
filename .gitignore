@@ -21,6 +21,13 @@ yarn-error.log*
 /test-output/outputs
 coverage/
 
+# Roundtable transcripts saved to the repo root during testing
+# (auto-named --save output). Don't commit session output.
+/roundtable-*.md
+
+# Local vendored experiments
+/ink-spinner/
+
 # TypeScript build output
 dist/
 
