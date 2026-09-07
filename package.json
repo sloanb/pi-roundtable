@@ -1,6 +1,6 @@
 {
   "name": "pi-roundtable",
-  "version": "0.4.0-beta.2",
+  "version": "0.4.0-beta.3",
   "description": "Group conversations between pi AI agents. Spawn multiple pi processes with different models and personas, have them talk through a topic together.",
   "type": "module",
   "bin": {
