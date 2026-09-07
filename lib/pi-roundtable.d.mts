@@ -53,7 +53,8 @@ export declare function parseArgs(argv: string[]): {
 	topic: string | null;
 	peers: string[] | null;
 	preset: string | null;
-	maxRounds: number;
+	/** Tri-state: null until --max-rounds, so config can supply it. */
+	maxRounds: number | null;
 	listPresets: boolean;
 	listModels: boolean;
 	listTranscripts: boolean;
@@ -67,16 +68,26 @@ export declare function parseArgs(argv: string[]): {
 	save: string | null;
 	model: string | null;
 	dryRun: boolean;
-	validateModels: boolean;
+	/** Tri-state: null until --validate-models/--no-validate-models. */
+	validateModels: boolean | null;
 	tools: string | null;
 	update: boolean;
 	checkOnly: boolean;
 	rollback: boolean;
 	yes: boolean;
+	config: boolean;
 	channel: string | null;
-	mode: string;
-	pretty: boolean;
+	/** Tri-state: null until --mode; resolved to "auto" by config defaults. */
+	mode: string | null;
+	/** Tri-state: null until --pretty/--no-pretty. */
+	pretty: boolean | null;
 	modeExplicit: boolean;
+	/** Tri-state: null until --compact/--no-compact. */
+	compact: boolean | null;
+	/** Tri-state: null until --timing/--no-timing. */
+	timing: boolean | null;
+	/** Tri-state: null until --thinking/--no-thinking. */
+	thinking: boolean | null;
 };
 
 export declare function printDryRun(opts: {
@@ -97,9 +108,12 @@ export declare function renderTranscript(
 ): string;
 export declare function runListTranscripts(dir: string): Promise<void>;
 export declare function runShow(options: {
-	path: string | boolean;
-	latest: boolean;
-	transcriptsDir: string;
+	/** Path, a `#N` result reference from the last --search, or null. */
+	path?: string | boolean | null;
+	latest?: boolean;
+	transcriptsDir?: string | null;
+	/** Install dir holding the search snapshot; required for #N refs. */
+	installDir?: string | null;
 }): Promise<void>;
 export declare function runSearch(options: {
 	dir: string;
@@ -107,6 +121,8 @@ export declare function runSearch(options: {
 	inField?: string;
 	tagsFilter?: Array<string>;
 	showAll?: boolean;
+	/** When given, the result list is snapshotted for `--show #N`. */
+	installDir?: string | null;
 }): Promise<void>;
 export declare function handleUpdate(options: {
 	args: any;

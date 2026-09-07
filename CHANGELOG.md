@@ -10,6 +10,51 @@ follow [Semantic Versioning](https://semver.org/).
 > `pi-roundtable --update --channel prerelease` (stable installs never
 > auto-receive pre-releases).
 
+## [0.4.0-beta.2] — BETA — 2026-09-07
+
+### Added
+
+- **Numbered search results with jump.** `--search` now numbers its results
+  (`[1]`, `[2]`, …) and snapshots the ordered list to
+  `<install-dir>/.search-results.json`, so a later sessionless invocation can
+  resolve them: `pi-roundtable --show @2` opens result 2 of the most recent
+  search. (`@N` is the shell-safe sigil — unquoted `#` starts a comment in
+  bash/zsh/fish — but quoted `"#N"` is also accepted.) The jump prints a
+  confirmation line ("result 2 of 4 from search X, run 3m ago") so staleness
+  is immediately visible. Failure modes are
+  explicit: no search in memory, out-of-range numbers, and results whose
+  file has since moved or been deleted. The snapshot is ephemeral (not
+  preserved by `--update`) and last-search-wins; empty-result searches are
+  snapshotted too, so `@N` reports "the last search found 0 results"
+  instead of failing on stale data.
+
+- **Global configuration** (`~/.pi-roundtable/config.json`, relocatable via
+  `PI_ROUNDTABLE_HOME`). Optional file; no file = built-in defaults exactly
+  as before. Survives `--update` (added to the updater's preserved user files
+  and rsync excludes). Precedence for every setting:
+  CLI flag → config.json → built-in default.
+  - `defaults.transcripts_dir` — one directory for all transcripts: default
+    for `--transcripts-dir`, used by `--show --latest` / `--list-transcripts`
+    / `--search`, and the destination of auto-named `--save` output (`~`
+    expands; the directory is created if missing). Explicit `--save PATH` is
+    unchanged (relative to cwd).
+  - `defaults.save` — always save transcripts.
+  - `defaults.preset` — preset used when neither `--preset` nor `--peers` is
+    passed.
+  - `defaults.max_rounds`, `mode` ("auto"/"sequential"/"orchestrated"),
+    `channel`, `tags` (stamped on saved transcripts only — `--search --tag`
+    filtering is always explicit and never narrowed by config tags),
+    `validate_models`, and the display flags (`pretty`, `compact`, `timing`,
+    `thinking`).
+  - `defaults.model` / `defaults.tools` — per-peer overrides; CLI flags win
+    per peer.
+  - `preset_aliases` — short names for presets (`--preset design` →
+    `design-review`); shown in `--list-presets` and unknown-preset errors.
+- `--config` — prints the effective configuration with per-key provenance
+  (`cli` / `file` / `default`) and the config file path.
+- Unknown config keys warn (and are ignored); wrong types for known keys and
+  malformed JSON are fatal with the key path / parse error.
+
 ## [0.4.0-beta.1] — BETA — 2026-09-06
 
 ### Added

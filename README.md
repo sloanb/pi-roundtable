@@ -109,6 +109,67 @@ channel (the updater orders `0.4.0-beta.1 < 0.4.0` correctly).
 
 See `CHANGELOG.md` for what each release contains.
 
+## Global configuration
+
+pi-roundtable reads a global config file from the install path —
+`~/.pi-roundtable/config.json` (relocated automatically if `PI_ROUNDTABLE_HOME`
+is set). The file survives `pi-roundtable --update`. It is **optional**: no
+file means built-in defaults, exactly as before.
+
+**Precedence for every setting: CLI flag → config.json → built-in default.**
+
+Run `pi-roundtable --config` at any time to print the effective values with
+per-key provenance (`cli` / `file` / `default`) and the config file path.
+
+Example config:
+
+```json
+{
+  "defaults": {
+    "preset": "design",
+    "transcripts_dir": "~/roundtables",
+    "save": true,
+    "max_rounds": 8,
+    "mode": "auto",
+    "channel": "stable",
+    "tags": ["design"],
+    "validate_models": true,
+    "model": { "researcher": "ollama-cloud/nemotron-3-ultra" },
+    "tools": { "researcher": ["read", "bash", "kagi_search"] },
+    "pretty": true, "compact": false, "timing": true, "thinking": true
+  },
+  "preset_aliases": {
+    "design": "design-review",
+    "cr": "orchestrated-code-review"
+  }
+}
+```
+
+What each key does (all optional, snake_case):
+
+| Key | Meaning |
+| --- | --- |
+| `defaults.preset` | Preset used when neither `--preset` nor `--peers` is passed. May itself be an alias. |
+| `defaults.transcripts_dir` | One directory for all transcripts: the default for `--transcripts-dir`, used by `--show --latest`, `--list-transcripts`, `--search`, **and** where auto-named `--save` writes. `~` expands. Explicit `--save PATH` still resolves relative to cwd. |
+| `defaults.save` | Always save transcripts, like passing `--save` every run (files go to `transcripts_dir`). |
+| `defaults.max_rounds` | Default `--max-rounds`. |
+| `defaults.mode` | `"auto"` (detect orchestrated when an orchestrator peer is selected), `"sequential"`, or `"orchestrated"`. |
+| `defaults.channel` | Default update channel for `--update`/`--check-only`. |
+| `defaults.tags` | Default tags stamped on **saved** transcripts; `--tag` entries are merged in (deduped). Search filtering (`--search --tag`) is always explicit — config tags never narrow a search. |
+| `defaults.validate_models` | Default for `--validate-models`. |
+| `defaults.model` | Per-peer model overrides, like `--model`; CLI flags win per peer. |
+| `defaults.tools` | Per-peer tool lists, like `--tools`; CLI flags win per peer. |
+| `defaults.pretty` / `.compact` / `.timing` / `.thinking` | Display preferences. |
+| `preset_aliases` | Short names for presets, e.g. `--preset design` → `design-review`. Aliases appear in `--list-presets` and in unknown-preset errors. |
+
+Unknown keys print a warning and are ignored; wrong types for known keys fail
+with the key path. A malformed config file is fatal on every command (so your
+configured intent never silently no-ops).
+
+Because all transcripts live in one directory by default, `--search` works as
+global recall across every session — a foundation for memory-style
+workflows.
+
 ## Quick start
 
 ```bash
@@ -190,10 +251,11 @@ The `capabilities` field (optional) tells the orchestrator what this peer is goo
 
 Use `--preset NAME` to invoke. Orchestrated presets auto-enable `--mode orchestrated`.
 
-**Transcript** — saved markdown of the full conversation. Use `--save` to write one. Saved files are searchable:
+**Transcript** — saved markdown of the full conversation. Use `--save` to write one. Saved files are searchable — results are numbered, and `--show @N` jumps straight to one (numbers refer to your most recent `--search`):
 
 ```bash
 pi-roundtable --search "redis" --transcripts-dir ~/decisions
+pi-roundtable --show @2                  # open result 2 of that search
 pi-roundtable --show --latest --transcripts-dir ~/decisions
 ```
 
@@ -215,9 +277,11 @@ Composition:
 
 Saving / loading:
   -o, --save [PATH]           Save transcript to markdown (auto-name if no path)
-      --show [PATH|--latest]  Render a saved transcript
+      --show [PATH|@N|--latest]  Render a saved transcript; @N opens result N
+                              of the most recent --search ("#N" works quoted)
   -T, --list-transcripts [DIR] List saved transcripts (newest first)
-      --search TERM           Search transcripts for TERM (case-insensitive)
+      --search TERM           Search transcripts for TERM (case-insensitive);
+                              results are numbered, jump with --show @N
       --in FIELD              Restrict --search: topic|outcome|peers|models|tags
       --tag NAME              Tag saved transcripts (repeatable); on --search,
                               filter to transcripts with matching tag
@@ -233,6 +297,9 @@ Models:
 
 Inspection:
   -n, --dry-run               Print config + first prompt, exit (no API calls)
+      --config                Print the effective global configuration
+                              (config.json + defaults) with per-key
+                              provenance, then exit
 
 Updating:
       --update                Check for and install the latest release from GitHub

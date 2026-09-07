@@ -18,6 +18,7 @@ WRAPPER_NAME="pi-roundtable"
 USER_FILES=(
     "peers"
     "presets.json"
+    "config.json"
 )
 
 # ========== HELPER FUNCTIONS ==========
@@ -408,6 +409,7 @@ do_update() {
     rsync -a --delete \
         --exclude='peers' \
         --exclude='presets.json' \
+        --exclude='config.json' \
         "${extract_dir}/" "${INSTALL_DIR}/"
 
     # Restore user files

@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+import { resolveArgs } from "../lib/config.mjs";
 import {
 	parseArgs,
 	parseFrontmatter,
@@ -246,19 +247,22 @@ describe("pi-roundtable CLI", () => {
 			expect(args2.validateModels).toBe(false);
 		});
 
-		it("defaults maxRounds to 12", () => {
+		it("leaves maxRounds null until resolved (config can supply it)", () => {
 			const args = parseArgs(["node", "pi-roundtable", "-t", "topic"]);
-			expect(args.maxRounds).toBe(12);
+			expect(args.maxRounds).toBeNull();
+			expect(resolveArgs(args, null).maxRounds).toBe(12);
 		});
 
-		it("defaults mode to sequential", () => {
+		it("leaves mode null until resolved (auto after resolution)", () => {
 			const args = parseArgs(["node", "pi-roundtable", "-t", "topic"]);
-			expect(args.mode).toBe("sequential");
+			expect(args.mode).toBeNull();
+			expect(resolveArgs(args, null).mode).toBe("auto");
 		});
 
-		it("defaults pretty to true", () => {
+		it("leaves pretty null until resolved (true after resolution)", () => {
 			const args = parseArgs(["node", "pi-roundtable", "-t", "topic"]);
-			expect(args.pretty).toBe(true);
+			expect(args.pretty).toBeNull();
+			expect(resolveArgs(args, null).pretty).toBe(true);
 		});
 
 		it("defaults save to null", () => {
