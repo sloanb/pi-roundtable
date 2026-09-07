@@ -10,6 +10,29 @@ follow [Semantic Versioning](https://semver.org/).
 > `pi-roundtable --update --channel prerelease` (stable installs never
 > auto-receive pre-releases).
 
+## [Unreleased]
+
+### Added
+
+- **Typo protection with "did you mean" suggestions.** Flag-shaped
+  tokens (`-show`, `--sav`) now hard-error with the nearest known flag
+  instead of silently becoming the conversation topic — previously
+  `pi-roundtable -show @1` launched a real roundtable *about "-show"*
+  and silently dropped `@1`. Suggestions use a zero-dependency
+  Levenshtein engine: missing double dashes are near-certain matches
+  (`-show` → `--show`), case is ignored, ties are listed together, and
+  unrecognizable tokens error plainly.
+- Value suggestions for constrained flags: `--mode sequental` →
+  `'sequential'`, `--in topc` → `'topic'`, `--channel` → valid list, and
+  unknown presets/aliases suggest their nearest match (`design-revew` →
+  `design-review`).
+- Extra positional arguments print a warning instead of being silently
+  dropped (only the first positional is the topic).
+- POSIX `--` end-of-options separator: `pi-roundtable -- "-show"` passes
+  a dash-leading topic literally; `--topic "-..."` also still works.
+- Registry-sync test: every known flag must parse without an
+  unknown-option error, pinning the suggestion registry to the parser.
+
 ## [0.4.0-beta.2] — BETA — 2026-09-07
 
 ### Added

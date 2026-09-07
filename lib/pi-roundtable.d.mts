@@ -88,7 +88,17 @@ export declare function parseArgs(argv: string[]): {
 	timing: boolean | null;
 	/** Tri-state: null until --thinking/--no-thinking. */
 	thinking: boolean | null;
+	/** Fatal parse error (unknown option, invalid flag value) — set by parseArgs. */
+	error: string | null;
+	/** Non-fatal parse warnings (ignored extra positionals). */
+	warnings: string[];
 };
+
+/** Every flag the CLI understands — feeds "did you mean" suggestions. */
+export declare const KNOWN_FLAGS: string[];
+
+/** Flags that consume the next token as a value (registry-sync test). */
+export declare const FLAGS_TAKING_VALUE: Set<string>;
 
 export declare function printDryRun(opts: {
 	topic: string;

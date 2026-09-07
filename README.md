@@ -261,6 +261,14 @@ pi-roundtable --show --latest --transcripts-dir ~/decisions
 
 ## CLI reference
 
+Mistyped flags are caught, not guessed at: anything flag-shaped (`-show`,
+`--sav`) errors with a "did you mean?" suggestion instead of silently
+becoming the conversation topic, and constrained values (`--mode`, `--in`,
+`--channel`, `--preset`) suggest their nearest valid spelling. Extra
+positionals print a warning instead of being silently dropped. For a topic
+that genuinely starts with a dash, pass `--topic "-..."` or use the `--`
+end-of-options separator.
+
 ```
 pi-roundtable --topic "your topic" [options]
 
