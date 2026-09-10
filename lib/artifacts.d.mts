@@ -21,6 +21,6 @@ export declare function isStructuredArtifact(value: unknown): boolean;
  * Returns null for empty/nullish values.
  */
 export declare function artifactToMarkdown(
-	name: string,
-	value: unknown,
+ name: string,
+ value: unknown,
 ): string | null;

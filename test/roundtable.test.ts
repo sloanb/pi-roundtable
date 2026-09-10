@@ -629,9 +629,7 @@ describe("Roundtable", () => {
 				// The worker's [DONE] is a signal for the orchestrator, not a
 				// conclusion — the run does not end here.
 				expect(rt.conclusion).toBeNull();
-				expect(rt._completionSignals).toEqual([
-					{ peer: "researcher", round: 1 },
-				]);
+				expect(rt._completionSignals).toEqual([{ peer: "researcher", round: 1 }]);
 				expect(rt.transcript).toHaveLength(1);
 			});
 
@@ -761,10 +759,7 @@ describe("Roundtable", () => {
 
 			it("continues past a worker [DONE] and lets the orchestrator conclude", async () => {
 				const done = { action: "done", summary: "All complete." };
-				const orch = scriptedClient([
-					JSON.stringify(route),
-					JSON.stringify(done),
-				]);
+				const orch = scriptedClient([JSON.stringify(route), JSON.stringify(done)]);
 				const worker = scriptedClient([`${report("Found things.")}\n[DONE]`]);
 				const rt = createRoundtable({
 					peers: [
@@ -788,10 +783,7 @@ describe("Roundtable", () => {
 
 			it("gives the orchestrator a wrap-up turn at the round limit", async () => {
 				const done = { action: "done", summary: "Best-effort wrap-up summary." };
-				const orch = scriptedClient([
-					JSON.stringify(route),
-					JSON.stringify(done),
-				]);
+				const orch = scriptedClient([JSON.stringify(route), JSON.stringify(done)]);
 				const worker = scriptedClient([`${report("Work in progress.")}\n[YIELD]`]);
 				const rt = createRoundtable({
 					peers: [

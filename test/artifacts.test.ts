@@ -1,8 +1,5 @@
 import { describe, it, expect } from "vitest";
-import {
-	artifactToMarkdown,
-	isStructuredArtifact,
-} from "../lib/artifacts.mjs";
+import { artifactToMarkdown, isStructuredArtifact } from "../lib/artifacts.mjs";
 import { Roundtable } from "../lib/roundtable.mjs";
 import { formatOrchestratorAction } from "../lib/pretty.mjs";
 import { renderMarkdown } from "../lib/pi-roundtable.mjs";
@@ -139,9 +136,7 @@ describe("_recordConclusion: structured artifacts", () => {
 			summary: "Done.",
 		});
 		expect(r.conclusion!.artifactDocs).toHaveLength(1);
-		expect(r.conclusion!.artifactDocs![0].markdown).toContain(
-			"- **name:** x",
-		);
+		expect(r.conclusion!.artifactDocs![0].markdown).toContain("- **name:** x");
 	});
 });
 
