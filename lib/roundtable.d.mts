@@ -48,6 +48,9 @@ export declare class Roundtable {
 	transcript: Turn[];
 	round: number;
 	conclusion: Conclusion | null;
+	/** Worker [DONE]s (orchestrated mode): completion signals for the
+	 *  orchestrator — never conclusions. */
+	_completionSignals: Array<{ peer: string; round: number }>;
 	workflowState: WorkflowState;
 
 	constructor(opts: RoundtableOptions);
@@ -72,7 +75,34 @@ export declare class Roundtable {
 	}): void;
 	_buildConclusionBlock(consensus: boolean): string;
 	_finishRun(consensus: boolean): RunResult;
-	_fallbackTurn(): Promise<boolean>;
+	_fallbackTurn(): Promise<void>;
+	_recordCompletionSignal(peerName: string): void;
+	/** Speak as a worker. In orchestrated mode, `done` is always false —
+	 *  a worker's [DONE] surfaces as `completionSignal` instead. */
+	_speakPeer(
+		peer: RoundtablePeerConfig,
+		orchestratorInstruction: unknown,
+	): Promise<{
+		text: string;
+		yielded: boolean;
+		done: boolean;
+		completionSignal: boolean;
+		structured: unknown | null;
+		durationMs: number;
+	}>;
+	_speakOrchestrator(opts?: { wrapUp?: boolean }): Promise<{
+		text: string;
+		durationMs: number;
+	}>;
+	_buildOrchestratorInstruction(
+		isFirst: boolean,
+		opts?: { wrapUp?: boolean },
+	): string;
+	_buildPeerInstruction(
+		peer: RoundtablePeerConfig,
+		orchestratorInstruction: unknown,
+		isFirst: boolean,
+	): string;
 	_startThinking(peer: { name: string; role: string }): void;
 	_stopThinking(peer: { name: string; role: string }): void;
 	_wireLog(

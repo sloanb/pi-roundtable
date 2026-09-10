@@ -216,3 +216,16 @@ For external consumers wanting to implement custom peers or extend the protocol:
   On a `done` action, the launcher now renders a full conclusion report
   (summary + details) to the console and to the saved transcript's
   `## Conclusion` section.
+- v1.2 (unreleased): **Conclusion authority is orchestrator-only.**
+  - A worker `[DONE]` is no longer a conclusion: the launcher records it as
+    a *completion signal* and surfaces it in the orchestrator's next context
+    ("Peer completion signals: …"), and the orchestrator alone emits
+    `action: done`.
+  - Control tokens inside a peer report's JSON payload are data, not
+    signals — `[DONE]`/`[YIELD]` are only recognized outside the JSON body.
+  - Round-limit wrap-up: when `max_rounds` is reached without a conclusion,
+    the orchestrator receives one final forced turn ("emit your best
+    summary as `done`, or list what remains") so it always has the last
+    say.
+  - Peer persona contract: workers always end with `[YIELD]` and never
+    emit `[DONE]` (enforced by a prompt audit test).

@@ -10,6 +10,43 @@ follow [Semantic Versioning](https://semver.org/).
 > `pi-roundtable --update --channel prerelease` (stable installs never
 > auto-receive pre-releases).
 
+## [Unreleased]
+
+### Fixed
+
+- **The orchestrator now always has the last say in orchestrated mode.**
+  Previously a worker's `[DONE]` could conclude the run (and did in at
+  least six saved transcripts, ending on implementer/critic/researcher).
+  Now a worker's `[DONE]` is a completion *signal* surfaced to the
+  orchestrator's next context — only the orchestrator ever emits
+  `action: done`.
+- **Tokens inside a worker's JSON report are data, not signals.** A report
+  whose findings merely mention `"[DONE]"` (e.g. an analysis of this
+  codebase) can no longer falsely conclude a run — `[DONE]`/`[YIELD]` are
+  only recognized outside the JSON payload.
+- **All worker peer prompts now defer conclusion to the Orchestrator.**
+  researcher/implementer/committer/releaser no longer teach `[DONE]`;
+  critic/code-reviewer/developer no longer reference other peers
+  concluding. Workers always `[YIELD]`. Pinned by a peer-prompt audit test.
+
+### Added
+
+- **Round-limit wrap-up turn.** When max-rounds is reached without a
+  conclusion, the orchestrator receives one final forced turn ("emit your
+  best summary as `done`, or list what remains") — so it closes every
+  orchestrated run, even unconcluded ones.
+- Worker instructions now explicitly forbid `[DONE]` ("only the Orchestrator
+  concludes") and the orchestrator instruction states its exclusive
+  conclusion authority and surfaces peer completion signals.
+
+### Changed
+
+- Conclusion rendering order (console block and saved `## Conclusion`):
+  peer reports now come first and the concluding summary is always the
+  final word before the footer/end of file.
+- Sequential mode is unchanged: any peer may still conclude with `[DONE]`
+  per the runtime instruction (pinned by a regression test).
+
 ## [0.4.0-beta.3] — BETA — 2026-09-07
 
 ### Added

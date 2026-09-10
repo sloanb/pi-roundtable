@@ -614,7 +614,7 @@ describe("Roundtable", () => {
 		});
 
 		describe("_fallbackTurn", () => {
-			it("returns true and records the conclusion when the fallback worker emits [DONE]", async () => {
+			it("records a completion signal — never a conclusion — when the fallback worker emits [DONE]", async () => {
 				const fake = fakeClient("Done here. [DONE]");
 				const rt = createRoundtable({
 					peers: [
@@ -625,16 +625,17 @@ describe("Roundtable", () => {
 				});
 				rt.round = 1;
 				rt.clients.set("researcher", fake);
-				const done = await rt._fallbackTurn();
-				expect(done).toBe(true);
-				expect(rt.conclusion).toMatchObject({
-					byPeer: "researcher",
-					summary: "Done here.",
-				});
+				await rt._fallbackTurn();
+				// The worker's [DONE] is a signal for the orchestrator, not a
+				// conclusion — the run does not end here.
+				expect(rt.conclusion).toBeNull();
+				expect(rt._completionSignals).toEqual([
+					{ peer: "researcher", round: 1 },
+				]);
 				expect(rt.transcript).toHaveLength(1);
 			});
 
-			it("returns false when the fallback worker yields", async () => {
+			it("records no signal when the fallback worker yields", async () => {
 				const fake = fakeClient("More to do. [YIELD]");
 				const rt = createRoundtable({
 					peers: [
@@ -645,19 +646,266 @@ describe("Roundtable", () => {
 				});
 				rt.round = 1;
 				rt.clients.set("researcher", fake);
-				const done = await rt._fallbackTurn();
-				expect(done).toBe(false);
+				await rt._fallbackTurn();
 				expect(rt.conclusion).toBeNull();
+				expect(rt._completionSignals).toEqual([]);
 			});
 
-			it("returns false when there are no worker peers", async () => {
+			it("is a no-op when there are no worker peers", async () => {
 				const rt = createRoundtable({
 					peers: [{ name: "orchestrator", role: "orchestrator" }],
 					mode: "orchestrated",
 				});
 				rt.round = 1;
-				const done = await rt._fallbackTurn();
-				expect(done).toBe(false);
+				await rt._fallbackTurn();
+				expect(rt.transcript).toHaveLength(0);
+			});
+		});
+	});
+
+	describe("orchestrator last-say", () => {
+		/** A client whose get_messages returns texts[i] in call order. */
+		function scriptedClient(texts: string[]) {
+			let i = -1;
+			return {
+				onEvent: vi.fn(),
+				kill: vi.fn(),
+				send: vi.fn().mockImplementation(async (msg: { type: string }) => {
+					if (msg.type === "get_messages") {
+						i++;
+						return {
+							data: {
+								messages: [
+									{
+										role: "assistant",
+										content: [
+											{ type: "text", text: texts[Math.min(i, texts.length - 1)] },
+										],
+									},
+								],
+							},
+						};
+					}
+					return {};
+				}),
+			};
+		}
+
+		const report = (findings: string) =>
+			JSON.stringify({
+				status: "complete",
+				findings,
+				artifacts: [],
+				recommended_next_peer: null,
+			});
+
+		describe("_speakPeer token semantics (orchestrated)", () => {
+			it("treats [DONE] inside a JSON report as data, not a signal", async () => {
+				const rt = createRoundtable({ mode: "orchestrated" });
+				const peer = { name: "researcher", role: "researcher" };
+				rt.clients.set(
+					"researcher",
+					scriptedClient([report("Analysis mentions [DONE] as a token.")]),
+				);
+				const result = await rt._speakPeer(peer, null);
+				expect(result.done).toBe(false);
+				expect(result.completionSignal).toBe(false);
+				expect(result.structured).not.toBeNull();
+				expect(result.text).toContain("[DONE]"); // inside the report: untouched
+			});
+
+			it("treats [DONE] outside the JSON report as a completion signal, never a conclusion", async () => {
+				const rt = createRoundtable({ mode: "orchestrated" });
+				const peer = { name: "researcher", role: "researcher" };
+				rt.clients.set(
+					"researcher",
+					scriptedClient([`${report("Found it.")}\n[DONE]`]),
+				);
+				const result = await rt._speakPeer(peer, null);
+				expect(result.done).toBe(false);
+				expect(result.completionSignal).toBe(true);
+				expect(result.text).not.toContain("[DONE]");
+			});
+
+			it("strips a trailing [YIELD] outside the JSON report", async () => {
+				const rt = createRoundtable({ mode: "orchestrated" });
+				const peer = { name: "researcher", role: "researcher" };
+				rt.clients.set(
+					"researcher",
+					scriptedClient([`${report("Found it.")}\n[YIELD]`]),
+				);
+				const result = await rt._speakPeer(peer, null);
+				expect(result.yielded).toBe(true);
+				expect(result.completionSignal).toBe(false);
+				expect(result.text).not.toContain("[YIELD]");
+			});
+
+			it("sequential mode still lets a peer conclude with [DONE] (regression guard)", async () => {
+				const rt = createRoundtable({ mode: "sequential" });
+				const peer = { name: "researcher", role: "researcher" };
+				rt.clients.set("researcher", scriptedClient(["All agreed. [DONE]"]));
+				const result = await rt._speakPeer(peer, null);
+				expect(result.done).toBe(true);
+				expect(result.text).toBe("All agreed.");
+			});
+		});
+
+		describe("orchestrated run: conclusion authority", () => {
+			const route = {
+				action: "route",
+				next_peer: "researcher",
+				instruction: "Research it",
+				reason: "first",
+				expected_output: "a report",
+			};
+
+			it("continues past a worker [DONE] and lets the orchestrator conclude", async () => {
+				const done = { action: "done", summary: "All complete." };
+				const orch = scriptedClient([
+					JSON.stringify(route),
+					JSON.stringify(done),
+				]);
+				const worker = scriptedClient([`${report("Found things.")}\n[DONE]`]);
+				const rt = createRoundtable({
+					peers: [
+						{ name: "orchestrator", role: "orchestrator" },
+						{ name: "researcher", role: "researcher" },
+					],
+					mode: "orchestrated",
+					maxRounds: 5,
+					onUpdate: () => {},
+				});
+				rt.start = async () => {
+					rt.clients.set("orchestrator", orch);
+					rt.clients.set("researcher", worker);
+				};
+				const result = await rt.run();
+				expect(result.consensus).toBe(true);
+				expect(result.conclusion!.byPeer).toBe("orchestrator");
+				expect(rt._completionSignals).toEqual([{ peer: "researcher", round: 1 }]);
+				expect(result.transcript.at(-1)!.peer).toBe("orchestrator");
+			});
+
+			it("gives the orchestrator a wrap-up turn at the round limit", async () => {
+				const done = { action: "done", summary: "Best-effort wrap-up summary." };
+				const orch = scriptedClient([
+					JSON.stringify(route),
+					JSON.stringify(done),
+				]);
+				const worker = scriptedClient([`${report("Work in progress.")}\n[YIELD]`]);
+				const rt = createRoundtable({
+					peers: [
+						{ name: "orchestrator", role: "orchestrator" },
+						{ name: "researcher", role: "researcher" },
+					],
+					mode: "orchestrated",
+					maxRounds: 1,
+					onUpdate: () => {},
+				});
+				rt.start = async () => {
+					rt.clients.set("orchestrator", orch);
+					rt.clients.set("researcher", worker);
+				};
+				const result = await rt.run();
+				expect(result.consensus).toBe(true);
+				expect(result.conclusion!.byPeer).toBe("orchestrator");
+				expect(result.rounds).toBe(2); // 1 normal round + 1 wrap-up
+				expect(result.transcript.at(-1)!.peer).toBe("orchestrator");
+			});
+
+			it("ends without consensus when the wrap-up turn does not conclude", async () => {
+				const orch = scriptedClient([
+					JSON.stringify(route),
+					JSON.stringify(route), // wrap-up refuses: routes again
+				]);
+				const worker = scriptedClient([`${report("Work in progress.")}\n[YIELD]`]);
+				const rt = createRoundtable({
+					peers: [
+						{ name: "orchestrator", role: "orchestrator" },
+						{ name: "researcher", role: "researcher" },
+					],
+					mode: "orchestrated",
+					maxRounds: 1,
+					onUpdate: () => {},
+				});
+				rt.start = async () => {
+					rt.clients.set("orchestrator", orch);
+					rt.clients.set("researcher", worker);
+				};
+				const result = await rt.run();
+				expect(result.consensus).toBe(false);
+				expect(result.conclusion).toBeNull();
+			});
+		});
+
+		describe("instruction builders", () => {
+			it("orchestrator instruction states exclusive conclusion authority", () => {
+				const rt = createRoundtable({ mode: "orchestrated" });
+				expect(rt._buildOrchestratorInstruction(false)).toContain(
+					"ONLY participant that may conclude",
+				);
+			});
+
+			it("surfaces worker completion signals to the orchestrator", () => {
+				const rt = createRoundtable({ mode: "orchestrated" });
+				rt.round = 2;
+				rt._recordCompletionSignal("researcher");
+				const text = rt._buildOrchestratorInstruction(false);
+				expect(text).toContain("Peer completion signals");
+				expect(text).toContain("researcher (round 2)");
+			});
+
+			it("wrap-up instruction forces a final done", () => {
+				const rt = createRoundtable({ mode: "orchestrated" });
+				const text = rt._buildOrchestratorInstruction(false, { wrapUp: true });
+				expect(text).toContain("FINAL turn");
+				expect(text).toContain("done");
+			});
+
+			it("worker instruction forbids [DONE] and requires [YIELD]", () => {
+				const rt = createRoundtable({ mode: "orchestrated" });
+				const text = rt._buildPeerInstruction(
+					{ name: "researcher", role: "researcher" },
+					{ instruction: "x", expected_output: "y" },
+					false,
+				);
+				expect(text).toContain("Never emit [DONE]");
+				expect(text).toContain("[YIELD]");
+			});
+		});
+
+		describe("conclusion rendering order", () => {
+			it("renders peer contributions before the orchestrator's summary", () => {
+				const rt = createRoundtable({ mode: "orchestrated" });
+				rt.conclusion = {
+					mode: "orchestrated",
+					byPeer: "orchestrator",
+					byRole: "orchestrator",
+					round: 2,
+					summary: "The orchestrator's final word.",
+					structured: null,
+					artifacts: [],
+					completedTasks: [],
+					pendingTasks: [],
+					blockedTasks: [],
+					peerFindings: [
+						{
+							peer: "researcher",
+							role: "researcher",
+							status: "complete",
+							findings: "Worker findings.",
+							artifacts: [],
+						},
+					],
+				};
+				const block = rt._buildConclusionBlock(true);
+				expect(block.indexOf("Peer contributions")).toBeGreaterThan(0);
+				expect(block.indexOf("Peer contributions")).toBeLessThan(
+					block.indexOf("Summary:"),
+				);
+				expect(block.indexOf("Summary:")).toBeGreaterThan(
+					block.indexOf("researcher (researcher)"),
+				);
 			});
 		});
 	});
