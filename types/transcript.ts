@@ -56,7 +56,12 @@ export interface Conclusion {
 	round: number;
 	summary: string;
 	structured?: unknown | null;
+	/** Flat artifact strings (paths, names) shown in one line. */
 	artifacts: string[];
+	/** Structured artifacts (objects/arrays) rendered as human-readable
+	 *  Markdown docs. Optional: conclusions recorded before this field
+	 *  existed don't carry it. */
+	artifactDocs?: Array<{ name: string; markdown: string }>;
 	completedTasks: string[] | null;
 	pendingTasks: string[] | null;
 	blockedTasks: string[] | null;

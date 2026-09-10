@@ -14,6 +14,15 @@ follow [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- **Structured artifacts render as human-readable Markdown.** Object/array
+  values in `final_artifacts` and workflow state previously collapsed to
+  `[object Object],[object Object],…` garbage in the conclusion; they now
+  render as Markdown tables (object lists) or headed bullet sections,
+  in both the console conclusion block and the saved transcript. String
+  artifacts pass through verbatim — emit a JSON string as the artifact
+  value to keep it raw (zero knobs). The non-pretty decision display also
+  now shows the done summary (previously nothing was displayed).
+
 - **The orchestrator now always has the last say in orchestrated mode.**
   Previously a worker's `[DONE]` could conclude the run (and did in at
   least six saved transcripts, ending on implementer/critic/researcher).

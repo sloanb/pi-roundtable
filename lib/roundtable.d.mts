@@ -105,6 +105,8 @@ export declare class Roundtable {
 	): string;
 	_startThinking(peer: { name: string; role: string }): void;
 	_stopThinking(peer: { name: string; role: string }): void;
+	/** Display an orchestrator action (route/done/fallback) human-readably. */
+	_displayOrchestratorDecision(action: OrchestratorAction): void;
 	_wireLog(
 		client: {
 			onEvent(fn: (evt: unknown) => void): () => void;

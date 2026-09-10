@@ -28,6 +28,8 @@ favor Debian-family, desktop adoption favors Mint/Ubuntu derivatives...
 
 The **conclusion is always the last content printed before the `END` footer**, so the outcome of a run is easy to find and never buried in the conversation. On `[DONE]`, a well-formatted conclusion report is printed with the summary and all details (who concluded and when, artifacts produced, task state, and each peer's final findings in orchestrated mode). If the round limit is hit without a conclusion, a clear `📋 OUTCOME — no conclusion` block explains that instead — so a completed run is never ambiguous.
 
+Structured artifacts (objects/arrays in the orchestrator's `final_artifacts` and workflow state) are rendered as **human-readable Markdown** in the conclusion and saved transcript — object lists become tables, structures become headed bullet sections. String artifacts pass through verbatim; emit a JSON string as an artifact value if you specifically want it raw.
+
 ## What it does
 
 You give it a topic. It spawns multiple "peer" agents (each with its own model and persona). The peers take turns responding to each other until they reach consensus or hit the round limit. You watch the conversation stream to your terminal in real-time.

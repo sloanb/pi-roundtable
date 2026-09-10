@@ -229,3 +229,9 @@ For external consumers wanting to implement custom peers or extend the protocol:
     say.
   - Peer persona contract: workers always end with `[YIELD]` and never
     emit `[DONE]` (enforced by a prompt audit test).
+  - Structured artifacts (object/array values in `final_artifacts` and
+    workflow state) are rendered as human-readable Markdown in the
+    conclusion and saved transcript (tables for object lists, headed
+    bullet sections for structures). The wire protocol is unchanged —
+    string values pass through verbatim, so a deliberately raw JSON
+    artifact can be emitted as a JSON string.
