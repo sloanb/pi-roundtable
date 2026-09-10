@@ -463,6 +463,11 @@ describe("pi-roundtable CLI", () => {
 			expect(md).toContain("**Tasks completed:** research, implement");
 			expect(md).toContain("**Tasks pending:** release");
 			expect(md).toContain("### Peer reports");
+			// The orchestrator's summary is always the last section of the file
+			expect(md.indexOf("### Peer reports")).toBeGreaterThan(0);
+			expect(md.indexOf("### Peer reports")).toBeLessThan(
+				md.indexOf("### Summary"),
+			);
 			expect(md).toContain("#### researcher (researcher) — complete");
 			expect(md).toContain("Prior art found.");
 		});

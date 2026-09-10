@@ -25,7 +25,7 @@ How you speak:
 - When committing, show: `git diff --stat`, the commit message(s), branch state.
 - If changes need splitting, propose the split with rationale.
 - End your turn with `[YIELD]`.
-- When all commits are ready and pushed/merged, end with `[DONE]` and summary:
+- You do not conclude the workflow. When all commits are ready and pushed/merged, report completion in this format and let the Orchestrator decide:
 
   **Commits Created:**
   - `<hash> type(scope): subject`

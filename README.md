@@ -28,6 +28,8 @@ favor Debian-family, desktop adoption favors Mint/Ubuntu derivatives...
 
 The **conclusion is always the last content printed before the `END` footer**, so the outcome of a run is easy to find and never buried in the conversation. On `[DONE]`, a well-formatted conclusion report is printed with the summary and all details (who concluded and when, artifacts produced, task state, and each peer's final findings in orchestrated mode). If the round limit is hit without a conclusion, a clear `📋 OUTCOME — no conclusion` block explains that instead — so a completed run is never ambiguous.
 
+Structured artifacts (objects/arrays in the orchestrator's `final_artifacts` and workflow state) are rendered as **human-readable Markdown** in the conclusion and saved transcript — object lists become tables, structures become headed bullet sections. String artifacts pass through verbatim; emit a JSON string as an artifact value if you specifically want it raw.
+
 ## What it does
 
 You give it a topic. It spawns multiple "peer" agents (each with its own model and persona). The peers take turns responding to each other until they reach consensus or hit the round limit. You watch the conversation stream to your terminal in real-time.
@@ -386,10 +388,29 @@ In **orchestrated mode**, the `orchestrator` peer receives structured JSON repor
 
 Two control tokens the agents use:
 
-- **`[YIELD]`** — peer is done speaking, hand off to the next
-- **`[DONE]`** — **only the orchestrator** (in orchestrated mode) or **final peers** (implementer, committer, releaser, researcher in sequential mode) may signal consensus; the loop stops and a full conclusion report (summary + details) is printed as the last content before the `END` footer
+- **`[YIELD]`** — peer is done speaking, hand off. Every worker peer ends
+  every turn with it; in orchestrated mode it returns control to the
+  Orchestrator.
+- **`[DONE]`** — signals consensus. **Authority is mode-dependent:**
+  - **Orchestrated mode:** the **Orchestrator alone** may conclude — a
+    worker's `[DONE]` is a completion *signal* surfaced to the Orchestrator's
+    next turn, and the Orchestrator always emits the final `action: done`
+    itself (including a forced wrap-up turn at the round limit, so it has
+    the last say on every run). Tokens inside a worker's JSON report are
+    data, not signals — a report that merely *mentions* `[DONE]` can't
+    conclude anything.
+  - **Sequential mode:** any peer may signal consensus per the runtime
+    instruction.
 
-The personas in `peers/*.md` are tuned to use these naturally. If you write a custom peer, train it on the same convention or it won't know when to stop.
+On `[DONE]` the loop stops and a full conclusion report (peer reports, then
+the concluding summary as the final word) is printed as the last content
+before the `END` footer — and saved as the `## Conclusion` section in the
+same order.
+
+The personas in `peers/*.md` are tuned to use these naturally: workers
+always `[YIELD]` and defer conclusion to the Orchestrator. If you write a
+worker peer, follow the same convention — end with `[YIELD]`, never emit
+`[DONE]`.
 
 ## Troubleshooting
 
