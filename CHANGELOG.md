@@ -10,7 +10,7 @@ follow [Semantic Versioning](https://semver.org/).
 > `pi-roundtable --update --channel prerelease` (stable installs never
 > auto-receive pre-releases).
 
-## [Unreleased]
+## [0.4.0-beta.4] — BETA — 2026-09-10
 
 ### Fixed
 
